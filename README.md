@@ -124,8 +124,8 @@ The CLI interacts with these repositories:
 ## Development
 
 ```bash
-git clone https://github.com/cortinico/rn-cli.git
-cd rn-cli
+gh repo clone react-native-community/rn-release-automator
+cd rn-release-automator
 npm install
 npm run build    # strip Flow types → dist/
 npm start        # run the CLI
