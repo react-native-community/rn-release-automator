@@ -4,47 +4,32 @@ A CLI tool that automates the [React Native](https://reactnative.dev/) release p
 
 Built for the React Native Release Crew. Guides you step-by-step through every phase of a release with interactive prompts, pre-flight checks, and GitHub API integrations.
 
-## Install
-
-```bash
-npx rn-release-automator
-```
-
-Or install globally:
-
-```bash
-npm install -g rn-release-automator
-```
-
 ## Usage
 
-Run without arguments for the interactive menu:
-
 ```bash
-rn-release-automator
+npx rn-release-automator@latest
 ```
 
-Or invoke commands directly:
+Pass `--dry-run` to play with the CLI without making any changes:
 
 ```bash
-rn-release-automator status
-rn-release-automator status --series 0.85
-rn-release-automator prepare-release --series 0.85
-rn-release-automator publish --version 0.85.0-rc.1
+npx rn-release-automator@latest --dry-run
 ```
 
-Use `--dry-run` to preview any command without making changes:
+You can also invoke commands directly:
 
 ```bash
-rn-release-automator --dry-run
-rn-release-automator publish --version 0.85.0 --dry-run
+npx rn-release-automator@latest status
+npx rn-release-automator@latest status --series 0.85
+npx rn-release-automator@latest prepare-release --series 0.85
+npx rn-release-automator@latest publish --version 0.85.0-rc.1
 ```
 
 Use `--help` on any command to see available flags:
 
 ```bash
-rn-release-automator --help
-rn-release-automator cut-branch --help
+npx rn-release-automator@latest --help
+npx rn-release-automator@latest cut-branch --help
 ```
 
 ## Commands
