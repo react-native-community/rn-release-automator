@@ -1,0 +1,37 @@
+{
+  "name": "rn-release-automator",
+  "version": "0.1.0",
+  "description": "CLI tool to automate the React Native release process",
+  "type": "module",
+  "bin": {
+    "rn-release-automator": "./dist/index.js"
+  },
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "dev": "flow-remove-types src/ -d dist/ --all && node dist/index.js",
+    "build": "flow-remove-types src/ -d dist/ --all",
+    "prepublishOnly": "flow-remove-types src/ -d dist/ --all",
+    "start": "node dist/index.js",
+    "flow": "flow",
+    "typecheck": "flow check"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.0.0",
+    "@octokit/rest": "^21.0.0",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "ora": "^8.1.0"
+  },
+  "devDependencies": {
+    "flow-bin": "^0.252.0",
+    "flow-remove-types": "^2.252.0",
+    "@babel/core": "^7.24.0",
+    "@babel/node": "^7.23.0",
+    "@babel/preset-flow": "^7.24.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
