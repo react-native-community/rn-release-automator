@@ -119,6 +119,37 @@ export async function getBranch(
   return data;
 }
 
+// Resolve a commit-ish (full/short SHA, tag, or branch) to its commit data.
+// Throws if the ref cannot be found.
+export async function getCommit(
+  ref: string,
+  repo?: {owner: string, repo: string},
+): Promise<any> {
+  const target = repo ?? REACT_NATIVE_REPO;
+  const { data } = await getOctokit().repos.getCommit({
+    ...target,
+    ref,
+  });
+  return data;
+}
+
+// Compare two refs. The returned `status` is one of
+// "ahead" | "behind" | "identical" | "diverged", relative to `base`.
+// `base` is an ancestor of `head` when status is "ahead" or "identical".
+export async function compareRefs(
+  base: string,
+  head: string,
+  repo?: {owner: string, repo: string},
+): Promise<any> {
+  const target = repo ?? REACT_NATIVE_REPO;
+  const { data } = await getOctokit().repos.compareCommits({
+    ...target,
+    base,
+    head,
+  });
+  return data;
+}
+
 export async function createRelease(
   tagName: string,
   name: string,
