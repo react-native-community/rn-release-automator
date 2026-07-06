@@ -18,6 +18,7 @@ import {
 import {
   WORKFLOWS,
   RN_COMMUNITY_RELEASES_REPO,
+  REACT_NATIVE_REPO,
 } from "../config.js";
 import { DOCS } from "../docs.js";
 
@@ -38,7 +39,7 @@ function isInsideReactNativeRepo(): boolean {
       encoding: "utf8",
       timeout: 5000,
     }).trim();
-    return remote.includes("facebook/react-native");
+    return remote.includes(`${REACT_NATIVE_REPO.owner}/${REACT_NATIVE_REPO.repo}`);
   } catch {
     return false;
   }
@@ -88,13 +89,13 @@ export const testReleaseCommand: any = new Command("test-release")
     {
       const inRepo = isInsideReactNativeRepo();
       if (!inRepo) {
-        ui.warn("Not inside the facebook/react-native repository.");
+        ui.warn("Not inside the react/react-native repository.");
         const proceed = await ui.confirm("Continue anyway? (for testing purposes)");
         if (!proceed) {
           process.exit(1);
         }
       } else {
-        ui.success("Inside facebook/react-native");
+        ui.success("Inside react/react-native");
       }
 
       const currentBranch = getCurrentBranch();
