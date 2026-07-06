@@ -86,10 +86,6 @@ function runCommand(cmd: string): boolean {
 export const cutBranchCommand: any = new Command("cut-branch")
   .description("Create a new stable branch for RC0")
   .requiredOption("--series <series>", "Release series (e.g., 0.85)")
-  .option(
-    "--from-commit <sha>",
-    "Cut the branch from a specific commit instead of main HEAD (must be an ancestor of main). Useful when main's tip is red.",
-  )
   .option("--dry-run", "Show what would happen without making changes", false)
   .action(async (options: any) => {
     const dryRun: boolean = options.dryRun || ui._dryRunMode;
@@ -147,6 +143,10 @@ export const cutBranchCommand: any = new Command("cut-branch")
       }
     }
 
+    // When main's CI is red, the user may choose to cut from a different
+    // (green) commit; this holds that commit-ish until we resolve it below.
+    let sourceOverride: string | null = null;
+
     // Step 1: Check CI is green on main (test_all only)
     ui.step(2, 13, "Checking CI status on main (Test All)...");
     {
@@ -181,21 +181,41 @@ export const cutBranchCommand: any = new Command("cut-branch")
           ui.dim(`    ${run.url}`);
         }
         console.log();
-        if (options.fromCommit) {
-          // The user is deliberately cutting from a specific commit (typically
-          // because main's tip is red), so don't block on main's CI status.
-          ui.dim(`  Cutting from --from-commit ${options.fromCommit} instead of main HEAD — skipping this gate.`);
-          ui.dim("  Make sure that commit itself has green CI.");
-        } else {
-          const proceed = await ui.confirm(
-            chalk.yellow("CI is failing on main. Continue with branch cut?"),
-          );
-          if (!proceed) {
-            ui.warn("Aborted. Fix CI on main before cutting.");
-            ui.dim("  Tip: pass --from-commit <sha> to cut from the last green commit instead.");
+        const choice = await ui.select(
+          chalk.yellow("main CI is failing. How do you want to proceed?"),
+          [
+            {
+              name: "Cut from a different (green) commit",
+              value: "from-commit",
+              description: "Enter a commit on main's history to branch from",
+            },
+            {
+              name: "Cut from main HEAD anyway",
+              value: "main-head",
+              description: "Proceed with the current (red) tip of main",
+            },
+            {
+              name: "Abort",
+              value: "abort",
+              description: "Fix CI on main before cutting",
+            },
+          ],
+        );
+        if (choice === "abort") {
+          ui.warn("Aborted. Fix CI on main before cutting.");
+          return;
+        }
+        if (choice === "from-commit") {
+          const sha = (await ui.input("Commit SHA to cut from:")).trim();
+          if (!sha) {
+            ui.error("No commit provided. Aborting.");
+            process.exit(1);
             return;
           }
+          sourceOverride = sha;
+          ui.dim("  Make sure that commit itself has green CI.");
         }
+        // choice === "main-head" → leave sourceOverride null; cut from main HEAD
       }
     }
 
@@ -233,12 +253,12 @@ export const cutBranchCommand: any = new Command("cut-branch")
     ui.step(5, 13, "Resolving source commit...");
     let sourceSha: string;
     let sourceDesc: string;
-    if (options.fromCommit) {
+    if (sourceOverride) {
       let commit;
       try {
-        commit = await getCommit(options.fromCommit);
+        commit = await getCommit(sourceOverride);
       } catch {
-        ui.error(`Commit ${options.fromCommit} was not found in the repository.`);
+        ui.error(`Commit ${sourceOverride} was not found in the repository.`);
         process.exit(1);
         return;
       }
@@ -251,7 +271,7 @@ export const cutBranchCommand: any = new Command("cut-branch")
           ui.error(
             `Commit ${sourceSha.slice(0, 8)} is not an ancestor of main (compare status: ${cmp.status}).`,
           );
-          ui.dim("  --from-commit must point to a commit on main's history.");
+          ui.dim("  The commit must be on main's history.");
           process.exit(1);
           return;
         }
