@@ -32,7 +32,7 @@ npm install react-native@${version}
 1. Create a new project: \`npx @react-native-community/cli init MyApp --version ${version}\`
 2. Or upgrade: \`npx react-native upgrade ${version}\`
 
-**Report issues:** https://github.com/facebook/react-native/issues
+**Report issues:** https://github.com/react/react-native/issues
 
 Branch: \`${branch}\``;
   }
@@ -46,7 +46,7 @@ npm install react-native@${version}
 **Highlights:**
 - [TODO: Add highlights from changelog]
 
-**Full changelog:** https://github.com/facebook/react-native/releases/tag/v${version}
+**Full changelog:** https://github.com/react/react-native/releases/tag/v${version}
 
 **Upgrade guide:** https://react-native-community.github.io/upgrade-helper/?from=PREV_VERSION&to=${version}`;
 }
@@ -82,7 +82,7 @@ Install:
 npm install react-native@${version}
 \`\`\`
 
-Report issues: https://github.com/facebook/react-native/issues`;
+Report issues: https://github.com/react/react-native/issues`;
 }
 
 function generateStatusMessage(
@@ -111,15 +111,15 @@ function generateStatusMessage(
   return `# ${version}
 
 * ⌛ Pick changes and push \`${branch}\`
-* ⌛ Wait for ${ciJobName} to complete → https://github.com/facebook/react-native/actions
-* ⌛ Verify that E2E tests are green → https://github.com/facebook/react-native/actions
+* ⌛ Wait for ${ciJobName} to complete → https://github.com/react/react-native/actions
+* ⌛ Verify that E2E tests are green → https://github.com/react/react-native/actions
 ${testingStep}
-* ⌛ Publish release job → https://github.com/facebook/react-native/actions
+* ⌛ Publish release job → https://github.com/react/react-native/actions
 * ⌛ Verify template: \`npx @react-native-community/cli init\` + \`build\` for iOS + Android
 * ⌛ Verify upgrade helper → https://react-native-community.github.io/upgrade-helper/?from=PREV_VERSION&to=${version}
 * ⌛ Verify Maven assets → https://repo1.maven.org/maven2/com/facebook/react/react-native-artifacts/${version}
-* ⌛ Generate changelog PR → https://github.com/facebook/react-native/pulls
-* ⌛ Create GitHub release → https://github.com/facebook/react-native/releases/tag/v${version}
+* ⌛ Generate changelog PR → https://github.com/react/react-native/pulls
+* ⌛ Create GitHub release → https://github.com/react/react-native/releases/tag/v${version}
 * ⌛ Communicate release to \`#releases-coordination\` on Discord
 * ⌛ Communicate release to \`React Native Releases\` on Workplace (Meta internal)
 * ⌛ Update GitHub project`;
@@ -128,8 +128,8 @@ ${testingStep}
 function generateShortDiscordAnnouncement(version: string): string {
   return `📢 ${version} is out!
 
-📦 Release tag: https://github.com/facebook/react-native/releases/tag/v${version}
-📝 Changelog PR: https://github.com/facebook/react-native/pull/<PR_NUMBER>`;
+📦 Release tag: https://github.com/react/react-native/releases/tag/v${version}
+📝 Changelog PR: https://github.com/react/react-native/pull/<PR_NUMBER>`;
 }
 
 export const communicateCommand: any = new Command("communicate")

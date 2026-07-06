@@ -64,7 +64,7 @@ function parsePickBody(body: string): {
 
   // Extract PR numbers (react-native only)
   const prMatches = linksSection.match(
-    /https:\/\/github\.com\/facebook\/react-native\/pull\/(\d+)/g,
+    /https:\/\/github\.com\/react\/react-native\/pull\/(\d+)/g,
   ) ?? [];
   const prLinks = prMatches.map((url) => {
     const m = url.match(/\/pull\/(\d+)/);
@@ -73,7 +73,7 @@ function parsePickBody(body: string): {
 
   // Extract commit SHAs from URLs and bare SHAs
   const commitUrlMatches = linksSection.match(
-    /https:\/\/github\.com\/facebook\/react-native\/commit\/([a-f0-9]{7,40})/g,
+    /https:\/\/github\.com\/react\/react-native\/commit\/([a-f0-9]{7,40})/g,
   ) ?? [];
   const commitShas = commitUrlMatches.map((url) => {
     const m = url.match(/\/commit\/([a-f0-9]{7,40})/);
@@ -557,7 +557,7 @@ export const prepareReleaseCommand: any = new Command("prepare-release")
               ui.info(`  CI status: ${a.ciStatus}`);
             }
             ui.warn("  Merge this PR manually on GitHub.");
-            ui.dim(`  https://github.com/facebook/react-native/pull/${a.prNumber ?? ""}`);
+            ui.dim(`  https://github.com/react/react-native/pull/${a.prNumber ?? ""}`);
           } else if (a.type === "pr_merged_on_branch") {
             ui.success(`  PR #${a.prNumber ?? ""} is already merged into ${branch}.`);
             ui.warn("  This pick request is still open but the work is done.");

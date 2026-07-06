@@ -73,7 +73,7 @@ export const postPromotionCommand: any = new Command("post-promotion")
     }
     console.log();
     {
-      const editUrl = "https://github.com/facebook/react-native-website/edit/main/website/src/components/releases/_releases-table.md";
+      const editUrl = "https://github.com/react/react-native-website/edit/main/website/src/components/releases/_releases-table.md";
       const action = await ui.search("Update support policy?", [
         { name: "Open file in GitHub editor", value: "open" },
         { name: "Copy table to clipboard", value: "copy" },
@@ -116,7 +116,7 @@ export const postPromotionCommand: any = new Command("post-promotion")
     ui.dim(`  Title suggestion: "React Native 0.${minor} — [Highlights]"`);
     console.log();
     {
-      const prsUrl = "https://github.com/facebook/react-native-website/pulls?q=sort%3Aupdated-desc+is%3Apr+is%3Aopen";
+      const prsUrl = "https://github.com/react/react-native-website/pulls?q=sort%3Aupdated-desc+is%3Apr+is%3Aopen";
       const action = await ui.search("Blog post?", [
         { name: "Open website PRs page", value: "open" },
         { name: "Skip", value: "skip" },
@@ -138,8 +138,8 @@ export const postPromotionCommand: any = new Command("post-promotion")
     ui.dim("  2. Cut a new version of the website docs");
     console.log();
     {
-      const prsUrl = "https://github.com/facebook/react-native-website/pulls?q=sort%3Aupdated-desc+is%3Apr+is%3Aopen";
-      const instructionsUrl = "https://github.com/facebook/react-native-website#cutting-a-new-version";
+      const prsUrl = "https://github.com/react/react-native-website/pulls?q=sort%3Aupdated-desc+is%3Apr+is%3Aopen";
+      const instructionsUrl = "https://github.com/react/react-native-website#cutting-a-new-version";
       const action = await ui.search("Update website?", [
         { name: "Open website PRs page", value: "prs" },
         { name: "Open version-cutting instructions", value: "instructions" },

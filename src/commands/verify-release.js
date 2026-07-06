@@ -190,7 +190,7 @@ export const verifyReleaseCommand: any = new Command("verify-release")
     // 5. Review and merge changelog PR
     console.log(chalk.bold(`  [5/8] Review and merge changelog PR`));
     {
-      const url = "https://github.com/facebook/react-native/pulls?q=is%3Apr+is%3Aopen+%22%5BRN%5D%5BChangelog%5D%22+in%3Atitle";
+      const url = "https://github.com/react/react-native/pulls?q=is%3Apr+is%3Aopen+%22%5BRN%5D%5BChangelog%5D%22+in%3Atitle";
       ui.dim(`     ${url}`);
       console.log();
       const action = await ui.search("Review changelog PR?", [
@@ -209,7 +209,7 @@ export const verifyReleaseCommand: any = new Command("verify-release")
     // 6. Publish GitHub release
     console.log(chalk.bold(`  [6/8] Publish GitHub release`));
     {
-      const url = `https://github.com/facebook/react-native/releases/tag/v${version}`;
+      const url = `https://github.com/react/react-native/releases/tag/v${version}`;
       ui.dim(`     ${url}`);
       if (isStable) {
         ui.dim("     Mark as 'Latest release' (not pre-release)");

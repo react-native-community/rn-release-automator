@@ -11,7 +11,7 @@ import {
   getBranch,
   listWorkflowRuns,
 } from "../utils/github.js";
-import { WORKFLOWS } from "../config.js";
+import { WORKFLOWS, REACT_NATIVE_REPO } from "../config.js";
 import { DOCS } from "../docs.js";
 
 const SERIES_PATTERN = /^(\d+)\.(\d+)$/;
@@ -41,7 +41,7 @@ function isInsideReactNativeRepo(): boolean {
       timeout: 5000,
       stdio: ["pipe", "pipe", "pipe"],
     }).trim();
-    return remote.includes("facebook/react-native");
+    return remote.includes(`${REACT_NATIVE_REPO.owner}/${REACT_NATIVE_REPO.repo}`);
   } catch {
     return false;
   }
@@ -116,13 +116,13 @@ export const cutBranchCommand: any = new Command("cut-branch")
     ui.step(1, 13, "Verifying repository state...");
     {
       if (!isInsideReactNativeRepo()) {
-        ui.warn("Not inside the facebook/react-native repository.");
+        ui.warn("Not inside the react/react-native repository.");
         const proceed = await ui.confirm("Continue anyway? (for testing purposes)");
         if (!proceed) {
           process.exit(1);
         }
       } else {
-        ui.success("Inside facebook/react-native");
+        ui.success("Inside react/react-native");
       }
 
       const currentBranch = getCurrentBranch();
@@ -313,7 +313,7 @@ export const cutBranchCommand: any = new Command("cut-branch")
     // Step 8: Trigger React Native nightly
     ui.step(10, 13, "Triggering React Native nightly...");
     {
-      const nightlyUrl = "https://github.com/facebook/react-native/actions/workflows/nightly.yml";
+      const nightlyUrl = "https://github.com/react/react-native/actions/workflows/nightly.yml";
       if (!dryRun) {
         const action = await ui.search("Trigger nightly build?", [
           { name: "Open nightly workflow in browser", value: "open" },
@@ -445,7 +445,7 @@ export const cutBranchCommand: any = new Command("cut-branch")
     console.log(`  1. ${chalk.bold("Bump the react-native monorepo version on main")}`);
     ui.dim("     This needs a commit on main to bump the version to the next minor.");
     {
-      const refUrl = "https://github.com/facebook/react-native/commit/f1bedfb92bd1b0871ffdde1e208403bb56740cdd";
+      const refUrl = "https://github.com/react/react-native/commit/f1bedfb92bd1b0871ffdde1e208403bb56740cdd";
       ui.dim(`     Reference: ${refUrl}`);
       console.log();
       const action = await ui.search("Open reference commit?", [

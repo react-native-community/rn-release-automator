@@ -3,7 +3,7 @@
 // Constants and configuration for the Release Automator CLI
 
 export const REACT_NATIVE_REPO: {owner: string, repo: string} = {
-  owner: "facebook",
+  owner: "react",
   repo: "react-native",
 };
 
