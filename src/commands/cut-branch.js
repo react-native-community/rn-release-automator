@@ -9,6 +9,8 @@ import { ui } from "../utils/ui.js";
 import {
   createBranch,
   getBranch,
+  getCommit,
+  compareRefs,
   listWorkflowRuns,
 } from "../utils/github.js";
 import { WORKFLOWS, REACT_NATIVE_REPO } from "../config.js";
@@ -141,6 +143,10 @@ export const cutBranchCommand: any = new Command("cut-branch")
       }
     }
 
+    // When main's CI is red, the user may choose to cut from a different
+    // (green) commit; this holds that commit-ish until we resolve it below.
+    let sourceOverride: string | null = null;
+
     // Step 1: Check CI is green on main (test_all only)
     ui.step(2, 13, "Checking CI status on main (Test All)...");
     {
@@ -175,13 +181,41 @@ export const cutBranchCommand: any = new Command("cut-branch")
           ui.dim(`    ${run.url}`);
         }
         console.log();
-        const proceed = await ui.confirm(
-          chalk.yellow("CI is failing on main. Continue with branch cut?"),
+        const choice = await ui.select(
+          chalk.yellow("main CI is failing. How do you want to proceed?"),
+          [
+            {
+              name: "Cut from a different (green) commit",
+              value: "from-commit",
+              description: "Enter a commit on main's history to branch from",
+            },
+            {
+              name: "Cut from main HEAD anyway",
+              value: "main-head",
+              description: "Proceed with the current (red) tip of main",
+            },
+            {
+              name: "Abort",
+              value: "abort",
+              description: "Fix CI on main before cutting",
+            },
+          ],
         );
-        if (!proceed) {
+        if (choice === "abort") {
           ui.warn("Aborted. Fix CI on main before cutting.");
           return;
         }
+        if (choice === "from-commit") {
+          const sha = (await ui.input("Commit SHA to cut from:")).trim();
+          if (!sha) {
+            ui.error("No commit provided. Aborting.");
+            process.exit(1);
+            return;
+          }
+          sourceOverride = sha;
+          ui.dim("  Make sure that commit itself has green CI.");
+        }
+        // choice === "main-head" → leave sourceOverride null; cut from main HEAD
       }
     }
 
@@ -215,26 +249,60 @@ export const cutBranchCommand: any = new Command("cut-branch")
       ui.success(`Branch ${branch} does not exist yet`);
     }
 
-    // Step 4: Get main HEAD (read-only)
-    ui.step(5, 13, "Getting main branch HEAD...");
-    const main = await getBranch("main");
-    const mainSha = main.commit.sha;
-    ui.success(`main HEAD: ${mainSha.slice(0, 8)}`);
+    // Step 4: Resolve the source commit (read-only)
+    ui.step(5, 13, "Resolving source commit...");
+    let sourceSha: string;
+    let sourceDesc: string;
+    if (sourceOverride) {
+      let commit;
+      try {
+        commit = await getCommit(sourceOverride);
+      } catch {
+        ui.error(`Commit ${sourceOverride} was not found in the repository.`);
+        process.exit(1);
+        return;
+      }
+      sourceSha = commit.sha;
+
+      // Verify the commit is on main's history (an ancestor of main).
+      try {
+        const cmp = await compareRefs(sourceSha, "main");
+        if (cmp.status !== "ahead" && cmp.status !== "identical") {
+          ui.error(
+            `Commit ${sourceSha.slice(0, 8)} is not an ancestor of main (compare status: ${cmp.status}).`,
+          );
+          ui.dim("  The commit must be on main's history.");
+          process.exit(1);
+          return;
+        }
+      } catch {
+        ui.warn("Could not verify the commit is an ancestor of main; proceeding anyway.");
+      }
+
+      const firstLine = commit.commit.message.split("\n")[0];
+      sourceDesc = `commit ${sourceSha.slice(0, 8)} (${firstLine})`;
+      ui.success(`Cutting from ${sourceDesc}`);
+    } else {
+      const main = await getBranch("main");
+      sourceSha = main.commit.sha;
+      sourceDesc = `main (${sourceSha.slice(0, 8)})`;
+      ui.success(`main HEAD: ${sourceSha.slice(0, 8)}`);
+    }
 
     // Step 5: Create stable branch (mutation)
     ui.step(6, 13, `Creating branch ${branch}...`);
     if (!dryRun) {
       const proceed = await ui.confirm(
-        `Create branch ${branch} from main (${mainSha.slice(0, 8)})?`,
+        `Create branch ${branch} from ${sourceDesc}?`,
       );
       if (!proceed) {
         ui.warn("Aborted by user");
         return;
       }
-      await createBranch(branch, mainSha);
+      await createBranch(branch, sourceSha);
       ui.success(`Branch ${branch} created`);
     } else {
-      ui.dryRun(`Would create branch ${branch} from main (${mainSha.slice(0, 8)})`);
+      ui.dryRun(`Would create branch ${branch} from ${sourceDesc}`);
     }
 
     // Step 5bis: Checkout the branch locally
