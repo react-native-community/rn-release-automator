@@ -1,6 +1,6 @@
 {
   "name": "rn-release-automator",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "CLI tool to automate the React Native release process",
   "type": "module",
   "repository": {
