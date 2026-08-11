@@ -70,6 +70,35 @@ export function isValidVersion(version: string): boolean {
 }
 
 /**
+ * Published versions in a release series, newest-first.
+ *
+ * Sorting the raw strings gets this wrong in two ways: `"0.87.0"` is a prefix
+ * of `"0.87.0-rc.4"` so the RC sorts above the stable release it precedes, and
+ * `"0.83.9"` sorts above `"0.83.10"`.
+ *
+ * Versions that aren't a plain `X.Y.Z` or `X.Y.Z-rc.N` are dropped — nightlies,
+ * `0.0.0-<sha>` commit builds, and the pre-0.57 `X.Y.Z-rcN` format can't be
+ * ordered meaningfully against a release series.
+ */
+export function versionsInSeries(
+  versions: Array<string>,
+  major: number,
+  minor: number,
+): Array<string> {
+  const prefix = `${major}.${minor}.`;
+  const parsed: Array<{ raw: string, version: ParsedVersion }> = [];
+  for (const raw of versions) {
+    const version = raw.startsWith(prefix) ? parseVersion(raw) : null;
+    if (version != null) {
+      parsed.push({ raw, version });
+    }
+  }
+  return parsed
+    .sort((a, b) => compareVersions(b.version, a.version))
+    .map((entry) => entry.raw);
+}
+
+/**
  * Check if the version uses the dual-tag Hermes scheme (>= 0.83).
  */
 export function usesDualHermesTag(v: ParsedVersion): boolean {
