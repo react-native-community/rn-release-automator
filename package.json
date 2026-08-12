@@ -1,6 +1,6 @@
 {
   "name": "rn-release-automator",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "CLI tool to automate the React Native release process",
   "type": "module",
   "repository": {
@@ -12,7 +12,7 @@
     "url": "https://github.com/react-native-community/rn-release-automator/issues"
   },
   "bin": {
-    "rn-release-automator": "./dist/index.js"
+    "rn-release-automator": "dist/index.js"
   },
   "files": [
     "dist/"
