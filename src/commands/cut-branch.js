@@ -18,6 +18,35 @@ import { DOCS } from "../docs.js";
 
 const SERIES_PATTERN = /^(\d+)\.(\d+)$/;
 
+// Human-readable titles for each step, used both to list steps (--resume with
+// no value) and to keep the step count in sync.
+const STEP_TITLES: Array<string> = [
+  "Verify repository state (in react-native, on main, clean working dir)",
+  "Check CI status on main (Test All)",
+  "Update external dependencies support table",
+  "Check the stable branch does not already exist",
+  "Resolve the source commit to cut from",
+  "Create the stable branch on GitHub",
+  "Check out the stable branch locally",
+  "Create the stable branch in react-native-community/template",
+  "Inform the CLI channel on Discord",
+  "Trigger the React Native nightly",
+  "Hermes release",
+  "Bump Hermes version on the release branch",
+  "Follow-up tasks (Hermes on main, monorepo version bump)",
+];
+const TOTAL_STEPS = STEP_TITLES.length;
+
+function printSteps(): void {
+  ui.info(`cut-branch runs ${TOTAL_STEPS} steps. Use --resume <n> to start from step n:`);
+  console.log();
+  STEP_TITLES.forEach((title, i) => {
+    console.log(`  ${chalk.bold(String(i + 1).padStart(2))}. ${title}`);
+  });
+  console.log();
+  ui.dim("  Note: steps 5 and 6 run together (resolve source + create branch).");
+}
+
 function parseSeries(series: string): {major: number, minor: number} | null {
   const match = series.match(SERIES_PATTERN);
   if (!match) return null;
@@ -86,8 +115,20 @@ function runCommand(cmd: string): boolean {
 export const cutBranchCommand: any = new Command("cut-branch")
   .description("Create a new stable branch for RC0")
   .requiredOption("--series <series>", "Release series (e.g., 0.85)")
+  .option(
+    "--resume [step]",
+    `Resume from a given step number (1-${TOTAL_STEPS}), skipping all earlier steps. ` +
+      "Use this to continue a branch cut that was interrupted partway through. " +
+      "Pass --resume with no value to list the steps.",
+  )
   .option("--dry-run", "Show what would happen without making changes", false)
   .action(async (options: any) => {
+    // `--resume` with no value → list the steps and exit.
+    if (options.resume === true) {
+      printSteps();
+      return;
+    }
+
     const dryRun: boolean = options.dryRun || ui._dryRunMode;
 
     const series = parseSeries(options.series);
@@ -108,15 +149,45 @@ export const cutBranchCommand: any = new Command("cut-branch")
       console.log();
     }
 
+    // Resolve the resume step (defaults to 1 = run everything from the start).
+    const resumeFrom: number =
+      options.resume != null ? parseInt(String(options.resume), 10) : 1;
+    if (Number.isNaN(resumeFrom) || resumeFrom < 1 || resumeFrom > TOTAL_STEPS) {
+      ui.error(
+        `Invalid --resume value: ${String(options.resume)}. Expected an integer between 1 and ${TOTAL_STEPS}.`,
+      );
+      process.exit(1);
+      return;
+    }
+    // A step runs only if its number is at or after the resume point.
+    const shouldRun = (step: number): boolean => step >= resumeFrom;
+
     const branch = `${series.major}.${series.minor}-stable`;
     const version = `${series.major}.${series.minor}.0-rc.0`;
 
     ui.header(`Cut Branch — ${series.major}.${series.minor} series`);
     ui.docRef(DOCS.cutBranch);
 
+    if (resumeFrom > 1) {
+      ui.info(`Resuming from step ${resumeFrom}/${TOTAL_STEPS} — earlier steps will be skipped.`);
+      // Steps 8–12 operate on the local stable branch (git commit/push, Hermes
+      // bump). Since the checkout step (7) is skipped on resume, make sure the
+      // branch is checked out before those steps run.
+      if (resumeFrom >= 8 && resumeFrom <= 12 && !dryRun) {
+        if (getCurrentBranch() !== branch) {
+          ui.dim(`  Checking out ${branch} for branch-local steps...`);
+          const ok = runCommand(`git fetch origin && git checkout ${branch}`);
+          if (!ok) {
+            ui.warn(`Could not checkout ${branch}. Check it out manually before continuing.`);
+          }
+        }
+      }
+      console.log();
+    }
+
     // Step 0: Check we're inside react-native on main with clean working dir
-    ui.step(1, 13, "Verifying repository state...");
-    {
+    if (shouldRun(1)) {
+      ui.step(1, TOTAL_STEPS, "Verifying repository state...");
       if (!isInsideReactNativeRepo()) {
         ui.warn("Not inside the react/react-native repository.");
         const proceed = await ui.confirm("Continue anyway? (for testing purposes)");
@@ -148,8 +219,8 @@ export const cutBranchCommand: any = new Command("cut-branch")
     let sourceOverride: string | null = null;
 
     // Step 1: Check CI is green on main (test_all only)
-    ui.step(2, 13, "Checking CI status on main (Test All)...");
-    {
+    if (shouldRun(2)) {
+      ui.step(2, TOTAL_STEPS, "Checking CI status on main (Test All)...");
       let allGreen = true;
       const failedRuns: Array<{name: string, url: string, conclusion: string}> = [];
 
@@ -220,8 +291,8 @@ export const cutBranchCommand: any = new Command("cut-branch")
     }
 
     // Step 2: Prompt to update support.md external dependencies table
-    ui.step(3, 13, "Update external dependencies support table...");
-    {
+    if (shouldRun(3)) {
+      ui.step(3, TOTAL_STEPS, "Update external dependencies support table...");
       const editUrl = "https://github.com/reactwg/react-native-releases/edit/main/docs/support.md#external-dependencies-supported";
       ui.info("Update the external dependencies table for the new release series.");
       ui.dim(`  ${editUrl}`);
@@ -240,87 +311,97 @@ export const cutBranchCommand: any = new Command("cut-branch")
     }
 
     // Step 3: Verify branch doesn't exist (read-only)
-    ui.step(4, 13, "Checking if branch already exists...");
-    try {
-      await getBranch(branch);
-      ui.error(`Branch ${branch} already exists. Aborting.`);
-      process.exit(1);
-    } catch {
-      ui.success(`Branch ${branch} does not exist yet`);
+    if (shouldRun(4)) {
+      ui.step(4, TOTAL_STEPS, "Checking if branch already exists...");
+      try {
+        await getBranch(branch);
+        ui.error(`Branch ${branch} already exists. Aborting.`);
+        ui.dim(`  If you meant to continue a partial cut, re-run with --resume <step>.`);
+        process.exit(1);
+      } catch {
+        ui.success(`Branch ${branch} does not exist yet`);
+      }
     }
 
-    // Step 4: Resolve the source commit (read-only)
-    ui.step(5, 13, "Resolving source commit...");
-    let sourceSha: string;
-    let sourceDesc: string;
-    if (sourceOverride) {
-      let commit;
-      try {
-        commit = await getCommit(sourceOverride);
-      } catch {
-        ui.error(`Commit ${sourceOverride} was not found in the repository.`);
-        process.exit(1);
-        return;
-      }
-      sourceSha = commit.sha;
-
-      // Verify the commit is on main's history (an ancestor of main).
-      try {
-        const cmp = await compareRefs(sourceSha, "main");
-        if (cmp.status !== "ahead" && cmp.status !== "identical") {
-          ui.error(
-            `Commit ${sourceSha.slice(0, 8)} is not an ancestor of main (compare status: ${cmp.status}).`,
-          );
-          ui.dim("  The commit must be on main's history.");
+    // Step 4 + Step 5 (resolve source commit, then create the branch) are
+    // coupled: the source SHA resolved here is consumed by branch creation.
+    // Both are gated together so resuming at step 6 still resolves a source.
+    let sourceSha: string = "";
+    let sourceDesc: string = "";
+    if (shouldRun(6)) {
+      // Step 4: Resolve the source commit (read-only)
+      ui.step(5, TOTAL_STEPS, "Resolving source commit...");
+      if (sourceOverride) {
+        let commit;
+        try {
+          commit = await getCommit(sourceOverride);
+        } catch {
+          ui.error(`Commit ${sourceOverride} was not found in the repository.`);
           process.exit(1);
           return;
         }
-      } catch {
-        ui.warn("Could not verify the commit is an ancestor of main; proceeding anyway.");
+        sourceSha = commit.sha;
+
+        // Verify the commit is on main's history (an ancestor of main).
+        try {
+          const cmp = await compareRefs(sourceSha, "main");
+          if (cmp.status !== "ahead" && cmp.status !== "identical") {
+            ui.error(
+              `Commit ${sourceSha.slice(0, 8)} is not an ancestor of main (compare status: ${cmp.status}).`,
+            );
+            ui.dim("  The commit must be on main's history.");
+            process.exit(1);
+            return;
+          }
+        } catch {
+          ui.warn("Could not verify the commit is an ancestor of main; proceeding anyway.");
+        }
+
+        const firstLine = commit.commit.message.split("\n")[0];
+        sourceDesc = `commit ${sourceSha.slice(0, 8)} (${firstLine})`;
+        ui.success(`Cutting from ${sourceDesc}`);
+      } else {
+        const main = await getBranch("main");
+        sourceSha = main.commit.sha;
+        sourceDesc = `main (${sourceSha.slice(0, 8)})`;
+        ui.success(`main HEAD: ${sourceSha.slice(0, 8)}`);
       }
 
-      const firstLine = commit.commit.message.split("\n")[0];
-      sourceDesc = `commit ${sourceSha.slice(0, 8)} (${firstLine})`;
-      ui.success(`Cutting from ${sourceDesc}`);
-    } else {
-      const main = await getBranch("main");
-      sourceSha = main.commit.sha;
-      sourceDesc = `main (${sourceSha.slice(0, 8)})`;
-      ui.success(`main HEAD: ${sourceSha.slice(0, 8)}`);
-    }
-
-    // Step 5: Create stable branch (mutation)
-    ui.step(6, 13, `Creating branch ${branch}...`);
-    if (!dryRun) {
-      const proceed = await ui.confirm(
-        `Create branch ${branch} from ${sourceDesc}?`,
-      );
-      if (!proceed) {
-        ui.warn("Aborted by user");
-        return;
+      // Step 5: Create stable branch (mutation)
+      ui.step(6, TOTAL_STEPS, `Creating branch ${branch}...`);
+      if (!dryRun) {
+        const proceed = await ui.confirm(
+          `Create branch ${branch} from ${sourceDesc}?`,
+        );
+        if (!proceed) {
+          ui.warn("Aborted by user");
+          return;
+        }
+        await createBranch(branch, sourceSha);
+        ui.success(`Branch ${branch} created`);
+      } else {
+        ui.dryRun(`Would create branch ${branch} from ${sourceDesc}`);
       }
-      await createBranch(branch, sourceSha);
-      ui.success(`Branch ${branch} created`);
-    } else {
-      ui.dryRun(`Would create branch ${branch} from ${sourceDesc}`);
     }
 
     // Step 5bis: Checkout the branch locally
-    ui.step(7, 13, `Checking out ${branch} locally...`);
-    if (!dryRun) {
-      const ok = runCommand(`git fetch origin && git checkout ${branch}`);
-      if (ok) {
-        ui.success(`Checked out ${branch}`);
+    if (shouldRun(7)) {
+      ui.step(7, TOTAL_STEPS, `Checking out ${branch} locally...`);
+      if (!dryRun) {
+        const ok = runCommand(`git fetch origin && git checkout ${branch}`);
+        if (ok) {
+          ui.success(`Checked out ${branch}`);
+        } else {
+          ui.warn(`Could not checkout ${branch}. Run manually: git fetch origin && git checkout ${branch}`);
+        }
       } else {
-        ui.warn(`Could not checkout ${branch}. Run manually: git fetch origin && git checkout ${branch}`);
+        ui.dryRun(`Would checkout ${branch}`);
       }
-    } else {
-      ui.dryRun(`Would checkout ${branch}`);
     }
 
     // Step 6: Create template branch
-    ui.step(8, 13, `Creating branch ${branch} in react-native-community/template...`);
-    {
+    if (shouldRun(8)) {
+      ui.step(8, TOTAL_STEPS, `Creating branch ${branch} in react-native-community/template...`);
       const templateRepo = { owner: "react-native-community", repo: "template" };
       if (!dryRun) {
         // Check if branch already exists
@@ -358,8 +439,8 @@ export const cutBranchCommand: any = new Command("cut-branch")
     }
 
     // Step 7: Inform CLI channel on Discord
-    ui.step(9, 13, "Inform CLI channel on Discord...");
-    {
+    if (shouldRun(9)) {
+      ui.step(9, TOTAL_STEPS, "Inform CLI channel on Discord...");
       const discordUrl = "https://discord.com/channels/514829729862516747/1232435652533031013";
       const message = `Hey, cutting ${branch} on react-native now, FYI in case CLI wants to cut a new major 🙂`;
       ui.info("Post this message to #cli on Discord:");
@@ -379,8 +460,8 @@ export const cutBranchCommand: any = new Command("cut-branch")
     }
 
     // Step 8: Trigger React Native nightly
-    ui.step(10, 13, "Triggering React Native nightly...");
-    {
+    if (shouldRun(10)) {
+      ui.step(10, TOTAL_STEPS, "Triggering React Native nightly...");
       const nightlyUrl = "https://github.com/react/react-native/actions/workflows/nightly.yml";
       if (!dryRun) {
         const action = await ui.search("Trigger nightly build?", [
@@ -400,8 +481,8 @@ export const cutBranchCommand: any = new Command("cut-branch")
     }
 
     // Step 9: Hermes release
-    ui.step(11, 13, "Hermes release...");
-    {
+    if (shouldRun(11)) {
+      ui.step(11, TOTAL_STEPS, "Hermes release...");
       const hermesGuide = "https://github.com/reactwg/react-native-releases/blob/main/docs/guide-hermes-release.md#for-react-native--083";
       ui.info("Follow the Hermes release guide:");
       ui.dim(`  ${hermesGuide}`);
@@ -420,8 +501,8 @@ export const cutBranchCommand: any = new Command("cut-branch")
     }
 
     // Step 10: Bump Hermes version on the release branch
-    ui.step(12, 13, "Bump Hermes version on the release branch...");
-    {
+    if (shouldRun(12)) {
+      ui.step(12, TOTAL_STEPS, "Bump Hermes version on the release branch...");
       ui.info("You need the Hermes tag and v1 tag from the Hermes release.");
       console.log();
 
@@ -467,41 +548,43 @@ export const cutBranchCommand: any = new Command("cut-branch")
     }
 
     // Step 11: Follow-ups
-    ui.step(13, 13, "Follow-up tasks...");
-    console.log();
-
-    console.log(`  ${chalk.bold("a. Bump Hermes on main of Hermes and v1 release branch")}`);
-    {
-      const url = "https://github.com/reactwg/react-native-releases/blob/main/docs/guide-hermes-release.md#step-5-bump-version-on-main-and-hermes-v1-release-branch";
-      ui.dim(`     ${url}`);
+    if (shouldRun(13)) {
+      ui.step(13, TOTAL_STEPS, "Follow-up tasks...");
       console.log();
-      const action = await ui.search("Open Hermes bump guide?", [
-        { name: "Open in browser", value: "open" },
-        { name: "Skip", value: "skip" },
-      ]);
-      if (action === "open") {
-        openUrl(url);
-        ui.success("  Opened in browser");
-      } else {
-        ui.dim("  Skipped");
+
+      console.log(`  ${chalk.bold("a. Bump Hermes on main of Hermes and v1 release branch")}`);
+      {
+        const url = "https://github.com/reactwg/react-native-releases/blob/main/docs/guide-hermes-release.md#step-5-bump-version-on-main-and-hermes-v1-release-branch";
+        ui.dim(`     ${url}`);
+        console.log();
+        const action = await ui.search("Open Hermes bump guide?", [
+          { name: "Open in browser", value: "open" },
+          { name: "Skip", value: "skip" },
+        ]);
+        if (action === "open") {
+          openUrl(url);
+          ui.success("  Opened in browser");
+        } else {
+          ui.dim("  Skipped");
+        }
       }
-    }
-    console.log();
-
-    console.log(`  ${chalk.bold("b. Bump Hermes on main of React Native")}`);
-    {
-      const url = "https://github.com/reactwg/react-native-releases/blob/main/docs/guide-hermes-release.md#step-6-only-for-branch-cut-bump-hermes-versions-on-react-native-main-branch";
-      ui.dim(`     ${url}`);
       console.log();
-      const action = await ui.search("Open React Native Hermes bump guide?", [
-        { name: "Open in browser", value: "open" },
-        { name: "Skip", value: "skip" },
-      ]);
-      if (action === "open") {
-        openUrl(url);
-        ui.success("  Opened in browser");
-      } else {
-        ui.dim("  Skipped");
+
+      console.log(`  ${chalk.bold("b. Bump Hermes on main of React Native")}`);
+      {
+        const url = "https://github.com/reactwg/react-native-releases/blob/main/docs/guide-hermes-release.md#step-6-only-for-branch-cut-bump-hermes-versions-on-react-native-main-branch";
+        ui.dim(`     ${url}`);
+        console.log();
+        const action = await ui.search("Open React Native Hermes bump guide?", [
+          { name: "Open in browser", value: "open" },
+          { name: "Skip", value: "skip" },
+        ]);
+        if (action === "open") {
+          openUrl(url);
+          ui.success("  Opened in browser");
+        } else {
+          ui.dim("  Skipped");
+        }
       }
     }
 
