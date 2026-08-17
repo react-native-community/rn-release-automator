@@ -7,6 +7,7 @@ import chalk from "chalk";
 import { execSync } from "child_process";
 import { ui } from "../utils/ui.js";
 import { getPublishedVersions, isVersionPublished } from "../utils/npm-utils.js";
+import { parseVersion, versionsInSeries } from "../utils/version.js";
 import { DOCS } from "../docs.js";
 
 const SERIES_PATTERN = /^(\d+)\.(\d+)$/;
@@ -49,22 +50,17 @@ export const verifyReleaseCommand: any = new Command("verify-release")
       return;
     }
 
-    const seriesPrefix = `${series.major}.${series.minor}.`;
-
     // Find the latest published version in this series
     const spinner = ui.spinner("Fetching latest version...");
     let version: string | null = null;
     let isStable = false;
     try {
       const allVersions = await getPublishedVersions();
-      const seriesVersions = allVersions
-        .filter((v) => v.startsWith(seriesPrefix) && !v.includes("-nightly"))
-        .sort()
-        .reverse();
+      const seriesVersions = versionsInSeries(allVersions, series.major, series.minor);
 
       if (seriesVersions.length > 0) {
         version = seriesVersions[0];
-        isStable = !version.includes("-rc.");
+        isStable = parseVersion(version)?.isPrerelease === false;
       }
     } catch (err: any) {
       spinner.stop();

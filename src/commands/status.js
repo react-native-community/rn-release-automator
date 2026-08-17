@@ -13,6 +13,7 @@ import {
   listPickRequests,
 } from "../utils/github.js";
 import { getDistTags, getPublishedVersions } from "../utils/npm-utils.js";
+import { versionsInSeries } from "../utils/version.js";
 import { WORKFLOWS, RELEASE_SCHEDULE } from "../config.js";
 
 const SERIES_PATTERN = /^(\d+)\.(\d+)$/;
@@ -106,11 +107,7 @@ async function showOverview(): Promise<void> {
   };
 
   const branchInfos: Array<BranchInfo> = stableBranches.slice(0, 30).map((branch) => {
-    const prefix = `${branch.major}.${branch.minor}.`;
-    const versions = allVersions
-      .filter((v) => v.startsWith(prefix) && !v.includes("-nightly"))
-      .sort()
-      .reverse();
+    const versions = versionsInSeries(allVersions, branch.major, branch.minor);
 
     const stableVersions = versions.filter((v) => !v.includes("-rc."));
     const rcVersions = versions.filter((v) => v.includes("-rc."));
@@ -216,7 +213,6 @@ async function showSeriesStatus(
   }
 
   const branch = `${series.major}.${series.minor}-stable`;
-  const seriesPrefix = `${series.major}.${series.minor}.`;
 
   ui.header(`Release Status — ${series.major}.${series.minor} series`);
 
@@ -272,10 +268,7 @@ async function showSeriesStatus(
     ]);
 
     const allVersions = await getPublishedVersions();
-    const seriesVersions = allVersions
-      .filter((v) => v.startsWith(seriesPrefix) && !v.includes("-nightly"))
-      .sort()
-      .reverse();
+    const seriesVersions = versionsInSeries(allVersions, series.major, series.minor);
 
     if (seriesVersions.length > 0) {
       console.log();

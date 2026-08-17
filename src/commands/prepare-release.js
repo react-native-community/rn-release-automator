@@ -11,6 +11,7 @@ import {
   stableBranch,
   nextRC,
   nextPatch,
+  versionsInSeries,
 } from "../utils/version.js";
 import {
   getBranch,
@@ -258,7 +259,6 @@ export const prepareReleaseCommand: any = new Command("prepare-release")
     }
 
     const branch = `${series.major}.${series.minor}-stable`;
-    const seriesPrefix = `${series.major}.${series.minor}.`;
 
     ui.header(`Prepare Release — ${series.major}.${series.minor} series`);
     ui.docRef(DOCS.prepareRelease);
@@ -311,10 +311,7 @@ export const prepareReleaseCommand: any = new Command("prepare-release")
     let latestParsed: any = null;
     try {
       const allVersions = await getPublishedVersions();
-      const seriesVersions = allVersions
-        .filter((v) => v.startsWith(seriesPrefix) && !v.includes("-nightly"))
-        .sort()
-        .reverse();
+      const seriesVersions = versionsInSeries(allVersions, series.major, series.minor);
 
       if (seriesVersions.length > 0) {
         latestVersion = seriesVersions[0];
