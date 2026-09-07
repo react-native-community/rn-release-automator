@@ -14,6 +14,11 @@ import {
   listWorkflowRuns,
 } from "../utils/github.js";
 import { isInsideReactNativeRepo } from "../utils/git.js";
+import {
+  prepareHermesRelease,
+  bumpHermesVersion,
+} from "./hermes.js";
+import type { PreparedHermesRelease } from "./hermes.js";
 import { WORKFLOWS } from "../config.js";
 import { DOCS } from "../docs.js";
 
@@ -393,74 +398,32 @@ export const cutBranchCommand: any = new Command("cut-branch")
       }
     }
 
-    // Step 10: Hermes release
+    // Step 10: Prepare the version-appropriate Hermes release
     ui.step(11, 13, "Hermes release...");
-    {
-      const hermesGuide = "https://github.com/reactwg/react-native-releases/blob/main/docs/guide-hermes-release.md#for-react-native--083";
-      ui.info("Follow the Hermes release guide:");
-      ui.dim(`  ${hermesGuide}`);
-      console.log();
-      const action = await ui.search("Open Hermes release guide?", [
-        { name: "Open in browser", value: "open" },
-        { name: "Skip", value: "skip" },
-      ]);
-      if (action === "open") {
-        openUrl(hermesGuide);
-        ui.success("  Opened Hermes release guide");
-        await ui.confirm("Press enter when Hermes release is done...", true);
-      } else {
-        ui.dim("  Skipped");
-      }
+    let preparedHermes: PreparedHermesRelease;
+    try {
+      preparedHermes = await prepareHermesRelease(
+        {
+          major: series.major,
+          minor: series.minor,
+          patch: 0,
+          rc: 0,
+          isPrerelease: true,
+        },
+        sourceSha,
+        dryRun,
+      );
+    } catch (error: any) {
+      ui.error(error.message ?? "Could not prepare the Hermes release");
+      process.exit(1);
+      return;
     }
 
-    // Step 10: Bump Hermes version on the release branch
+    // Step 11: Bump Hermes version on the release branch
     ui.step(12, 13, "Bump Hermes version on the release branch...");
-    {
-      ui.info("You need the Hermes tag and v1 tag from the Hermes release.");
-      console.log();
+    await bumpHermesVersion(preparedHermes, dryRun);
 
-      const hermesTag = await ui.input("Enter the Hermes tag (e.g., hermes-2025-03-01-RNv0.85.0-abcdef0123):");
-      const hermesV1Tag = await ui.input("Enter the Hermes v1 tag (e.g., v1.0.0):");
-
-      const bumpCmd = `./packages/react-native/scripts/hermes/bump-hermes-version.js -t ${hermesTag} -s ${hermesV1Tag}`;
-      ui.info("Running bump command:");
-      ui.dim(`  ${bumpCmd}`);
-      console.log();
-
-      if (!dryRun) {
-        const proceed = await ui.confirm("Run the bump command?");
-        if (proceed) {
-          const ok = runCommand(bumpCmd);
-          if (ok) {
-            ui.success("Hermes version bumped");
-
-            // Commit and push
-            ui.info("Committing and pushing...");
-            const commitOk = runCommand(
-              'git add packages/react-native/sdks/.hermesversion packages/react-native/sdks/.hermesv1version packages/react-native/sdks/hermes-engine/version.properties && git commit -m "Bump hermes version" && git push',
-            );
-            if (commitOk) {
-              ui.success("Hermes version bump committed and pushed");
-            } else {
-              ui.warn("Could not commit/push. Run manually:");
-              ui.dim('  git add packages/react-native/sdks/.hermesversion packages/react-native/sdks/.hermesv1version packages/react-native/sdks/hermes-engine/version.properties');
-              ui.dim('  git commit -m "Bump hermes version"');
-              ui.dim("  git push");
-            }
-          } else {
-            ui.warn("Bump command failed. Run manually:");
-            ui.dim(`  ${bumpCmd}`);
-          }
-        } else {
-          ui.dim("  Skipped — run the command above manually");
-        }
-      } else {
-        ui.dryRun(`Would run: ${bumpCmd}`);
-        ui.dryRun("Would commit and push the Hermes version bump");
-      }
-    }
-
-    // Step 11: Follow-ups
+    // Step 12: Follow-ups
     ui.step(13, 13, "Follow-up tasks...");
     console.log();
 
