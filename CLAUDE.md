@@ -23,7 +23,13 @@ npm run dev
 node dist/index.js --dry-run
 ```
 
-There is no test suite. All commands support `--dry-run` for safe previewing.
+Tests use Node's built-in test runner against the compiled `dist/` output:
+
+```bash
+npm test
+```
+
+All commands support `--dry-run` for safe previewing.
 
 ## Commands
 
@@ -37,6 +43,7 @@ The CLI follows the React Native release lifecycle. Each command links to its co
 | `create-github-project` | `--series` | Clone and configure a GitHub Project for a release |
 | `prepare-release` | `--series` | Analyze picks, determine next version (RC/stable/patch), process picks via bot |
 | `publish` | `--version` | CI/picks/npm checks, trigger `create-release.yml` workflow |
+| `hermes` | `--version` | Guide the version-appropriate Hermes release and update the RN branch |
 | `test-release` | `--version` | Verify repo/branch, clean env, prebuilds, test matrix commands |
 | `verify-release` | `--series` | Interactive 8-step post-release verification (npm, template, Maven, changelog, etc.) |
 | `post-promotion` | `--series` | Update support policy table, blog post, website version cut |
@@ -51,7 +58,8 @@ The CLI has two entry modes: interactive (no args → searchable menu with Escap
 **Utils** (`src/utils/`):
 - `github.js` — Octokit client with auto-token discovery (`GITHUB_TOKEN` or `gh auth token`). Provides: workflow runs, branch/release CRUD, pick request listing with body parsing, commit status checks, PR details/comments, issue commenting/closing, unpublished commit detection.
 - `ui.js` — chalk styling, ora spinners, @inquirer prompts (search/input/confirm). Has `setDryRun()` which adds a red `DRY RUN` badge to all prompts. Escape-to-cancel via `withEscapeCancel` wrapper.
-- `version.js` — Parse/format RN versions, series comparison, next RC/patch/minor helpers. Versions >= 0.83 use dual-tag Hermes.
+- `version.js` — Parse/format RN versions, series comparison, next RC/patch/minor helpers.
+- `hermes.js` — Build version-aware Hermes plans. RN 0.83–0.86 uses legacy + V1 tags; RN >= 0.87 uses Hermes V1 only.
 - `preflight.js` — Checks Node, npm, git, gh CLI, GitHub token, repo access to 4 repos.
 - `npm-utils.js` — npm registry queries (versions, dist-tags, publication checks).
 - `git.js` — Shell-exec git wrappers (branch, cherry-pick, push, etc.).
