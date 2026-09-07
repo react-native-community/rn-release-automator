@@ -21,6 +21,7 @@ export const WORKFLOWS: {[string]: string} = {
   createRelease: "create-release.yml",
   testAll: "test-all.yml",
   testRelease: "test-release-local.yml",
+  nightly: "publish-npm.yml",
   publishRelease: "publish-release.yml",
   hermesRelease: "create-hermes-release.yml",
 };
