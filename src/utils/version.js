@@ -97,10 +97,3 @@ export function versionsInSeries(
     .sort((a, b) => compareVersions(b.version, a.version))
     .map((entry) => entry.raw);
 }
-
-/**
- * Check if the version uses the dual-tag Hermes scheme (>= 0.83).
- */
-export function usesDualHermesTag(v: ParsedVersion): boolean {
-  return v.major > 0 || v.minor >= 83;
-}
