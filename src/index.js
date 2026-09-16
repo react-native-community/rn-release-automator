@@ -11,6 +11,7 @@ import { cutBranchCommand } from "./commands/cut-branch.js";
 import { prepareReleaseCommand } from "./commands/prepare-release.js";
 import { publishCommand } from "./commands/publish.js";
 import { testReleaseCommand } from "./commands/test-release.js";
+import { hermesCommand } from "./commands/hermes.js";
 import { communicateCommand } from "./commands/communicate.js";
 import { createGithubProjectCommand } from "./commands/create-github-project.js";
 import { verifyReleaseCommand } from "./commands/verify-release.js";
@@ -52,6 +53,7 @@ program.addCommand(cutBranchCommand);
 program.addCommand(prepareReleaseCommand);
 program.addCommand(publishCommand);
 program.addCommand(testReleaseCommand);
+program.addCommand(hermesCommand);
 program.addCommand(communicateCommand);
 program.addCommand(createGithubProjectCommand);
 program.addCommand(verifyReleaseCommand);
@@ -110,6 +112,10 @@ async function interactiveMenu(dryRun: boolean): Promise<void> {
     {
       name: "🧪 Test Release — run local tests",
       value: "test-release",
+    },
+    {
+      name: "🏛️  Hermes — publish Hermes and update the RN branch",
+      value: "hermes",
     },
     {
       name: "✅ Verify Release — post-release verification checklist",

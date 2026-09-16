@@ -23,7 +23,7 @@ export const WORKFLOWS: {[string]: string} = {
   testRelease: "test-release-local.yml",
   nightly: "publish-npm.yml",
   publishRelease: "publish-release.yml",
-  hermesRelease: "create-hermes-release.yml",
+  hermesRelease: "rn-build-hermes.yml",
 };
 
 export const NPM_PACKAGE: string = "react-native";

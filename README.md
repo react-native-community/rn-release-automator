@@ -44,6 +44,7 @@ Commands follow the React Native release lifecycle. Each links to its correspond
 | `create-github-project` | Clone and configure a GitHub Project for tracking a release |
 | `prepare-release` | Analyze pick requests, determine next version, process picks via bot |
 | `publish` | Pre-flight checks, trigger `create-release.yml` workflow, monitor |
+| `hermes` | Guide the version-appropriate Hermes release and update the RN branch |
 | `test-release` | Verify repo/branch, clean env, download prebuilds, test matrix |
 | `verify-release` | Interactive 8-step post-release verification (npm, template, Maven, etc.) |
 | `post-promotion` | Update support policy, ship blog post, cut new website version |

@@ -188,6 +188,25 @@ export async function getRepoInfo(
   return data;
 }
 
+export async function getRepoFileContent(
+  path: string,
+  ref: string,
+  repo?: {owner: string, repo: string},
+): Promise<string> {
+  const target = repo ?? REACT_NATIVE_REPO;
+  const { data } = await getOctokit().repos.getContent({
+    ...target,
+    path,
+    ref,
+  });
+
+  if (Array.isArray(data) || typeof data.content !== "string") {
+    throw new Error(`Expected ${path} at ${ref} to be a file`);
+  }
+
+  return Buffer.from(data.content, data.encoding ?? "base64").toString("utf8");
+}
+
 export type UnpublishedCommit = {
   sha: string,
   message: string,
