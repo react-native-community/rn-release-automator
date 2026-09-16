@@ -277,8 +277,35 @@ export const cutBranchCommand: any = new Command("cut-branch")
       ui.success(`main HEAD: ${sourceSha.slice(0, 8)}`);
     }
 
-    // Step 5: Create stable branch (mutation)
-    ui.step(6, 13, `Creating branch ${branch}...`);
+    // Step 5: Trigger a final nightly from main before cutting the branch
+    ui.step(6, 13, "Run the final React Native nightly from main...");
+    {
+      const nightlyUrl = `https://github.com/react/react-native/actions/workflows/${WORKFLOWS.nightly}`;
+      ui.info(
+        "A manual dispatch of publish-npm.yml from a branch automatically runs in nightly mode.",
+      );
+      ui.info("Select main as the workflow branch so the nightly uses the branch-cut source.");
+      ui.dim(`  ${nightlyUrl}`);
+      console.log();
+
+      if (!dryRun) {
+        const action = await ui.search("Run the final nightly from main?", [
+          { name: "Open Publish to npm workflow in browser", value: "open" },
+          { name: "Skip", value: "skip" },
+        ]);
+        if (action === "open") {
+          openUrl(nightlyUrl);
+          ui.success("  Opened Publish to npm — select main, then click Run workflow");
+        } else {
+          ui.dim("  Skipped");
+        }
+      } else {
+        ui.dryRun("Would open publish-npm.yml for a manual nightly dispatch from main");
+      }
+    }
+
+    // Step 6: Create stable branch (mutation)
+    ui.step(7, 13, `Creating branch ${branch}...`);
     if (!dryRun) {
       const proceed = await ui.confirm(
         `Create branch ${branch} from ${sourceDesc}?`,
@@ -293,8 +320,8 @@ export const cutBranchCommand: any = new Command("cut-branch")
       ui.dryRun(`Would create branch ${branch} from ${sourceDesc}`);
     }
 
-    // Step 5bis: Checkout the branch locally
-    ui.step(7, 13, `Checking out ${branch} locally...`);
+    // Step 7: Checkout the branch locally
+    ui.step(8, 13, `Checking out ${branch} locally...`);
     if (!dryRun) {
       const ok = runCommand(`git fetch origin && git checkout ${branch}`);
       if (ok) {
@@ -306,8 +333,8 @@ export const cutBranchCommand: any = new Command("cut-branch")
       ui.dryRun(`Would checkout ${branch}`);
     }
 
-    // Step 6: Create template branch
-    ui.step(8, 13, `Creating branch ${branch} in react-native-community/template...`);
+    // Step 8: Create template branch
+    ui.step(9, 13, `Creating branch ${branch} in react-native-community/template...`);
     {
       const templateRepo = { owner: "react-native-community", repo: "template" };
       if (!dryRun) {
@@ -345,8 +372,8 @@ export const cutBranchCommand: any = new Command("cut-branch")
       }
     }
 
-    // Step 7: Inform CLI channel on Discord
-    ui.step(9, 13, "Inform CLI channel on Discord...");
+    // Step 9: Inform CLI channel on Discord
+    ui.step(10, 13, "Inform CLI channel on Discord...");
     {
       const discordUrl = "https://discord.com/channels/514829729862516747/1232435652533031013";
       const message = `Hey, cutting ${branch} on react-native now, FYI in case CLI wants to cut a new major 🙂`;
@@ -366,28 +393,7 @@ export const cutBranchCommand: any = new Command("cut-branch")
       }
     }
 
-    // Step 8: Trigger React Native nightly
-    ui.step(10, 13, "Triggering React Native nightly...");
-    {
-      const nightlyUrl = "https://github.com/react/react-native/actions/workflows/nightly.yml";
-      if (!dryRun) {
-        const action = await ui.search("Trigger nightly build?", [
-          { name: "Open nightly workflow in browser", value: "open" },
-          { name: "Skip", value: "skip" },
-        ]);
-        if (action === "open") {
-          openUrl(nightlyUrl);
-          ui.success("  Opened nightly workflow — trigger it manually");
-        } else {
-          ui.dim("  Skipped");
-        }
-      } else {
-        ui.dryRun("Would trigger nightly build");
-        ui.dim(`  ${nightlyUrl}`);
-      }
-    }
-
-    // Step 9: Hermes release
+    // Step 10: Hermes release
     ui.step(11, 13, "Hermes release...");
     {
       const hermesGuide = "https://github.com/reactwg/react-native-releases/blob/main/docs/guide-hermes-release.md#for-react-native--083";
