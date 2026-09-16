@@ -13,7 +13,8 @@ import {
   compareRefs,
   listWorkflowRuns,
 } from "../utils/github.js";
-import { WORKFLOWS, REACT_NATIVE_REPO } from "../config.js";
+import { isInsideReactNativeRepo } from "../utils/git.js";
+import { WORKFLOWS } from "../config.js";
 import { DOCS } from "../docs.js";
 
 const SERIES_PATTERN = /^(\d+)\.(\d+)$/;
@@ -33,19 +34,6 @@ function openUrl(url: string): void {
     } catch {
       // can't open
     }
-  }
-}
-
-function isInsideReactNativeRepo(): boolean {
-  try {
-    const remote = execSync("git remote get-url origin", {
-      encoding: "utf8",
-      timeout: 5000,
-      stdio: ["pipe", "pipe", "pipe"],
-    }).trim();
-    return remote.includes(`${REACT_NATIVE_REPO.owner}/${REACT_NATIVE_REPO.repo}`);
-  } catch {
-    return false;
   }
 }
 

@@ -15,10 +15,10 @@ import {
   listWorkflowRuns,
   getOctokit,
 } from "../utils/github.js";
+import { isInsideReactNativeRepo } from "../utils/git.js";
 import {
   WORKFLOWS,
   RN_COMMUNITY_RELEASES_REPO,
-  REACT_NATIVE_REPO,
 } from "../config.js";
 import { DOCS } from "../docs.js";
 
@@ -30,18 +30,6 @@ function getCurrentBranch(): string | null {
     }).trim();
   } catch {
     return null;
-  }
-}
-
-function isInsideReactNativeRepo(): boolean {
-  try {
-    const remote = execSync("git remote get-url origin", {
-      encoding: "utf8",
-      timeout: 5000,
-    }).trim();
-    return remote.includes(`${REACT_NATIVE_REPO.owner}/${REACT_NATIVE_REPO.repo}`);
-  } catch {
-    return false;
   }
 }
 

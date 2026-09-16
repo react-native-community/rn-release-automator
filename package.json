@@ -23,7 +23,8 @@
     "prepublishOnly": "flow-remove-types src/ -d dist/ --all",
     "start": "node dist/index.js",
     "flow": "flow",
-    "typecheck": "flow check"
+    "typecheck": "flow check",
+    "test": "npm run build && node --test test/*.test.js"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.0.0",

@@ -4,10 +4,70 @@
 
 import { execSync } from "child_process";
 
+export type GitHubRepository = {
+  owner: string,
+  repo: string,
+};
+
+const REACT_NATIVE_OWNERS: Set<string> = new Set(["react", "facebook"]);
+
 function git(args: string, cwd?: string): string {
   const options: any = { encoding: "utf8", timeout: 30000 };
   if (cwd) options.cwd = cwd;
   return execSync(`git ${args}`, options).trim();
+}
+
+/**
+ * Parse a GitHub remote without accepting lookalike hosts or extra path parts.
+ * Supports the URL forms printed by `git remote get-url`, including SCP-style
+ * SSH remotes such as git@github.com:react/react-native.git.
+ */
+export function parseGitHubRemote(remoteUrl: string): GitHubRepository | null {
+  const remote = remoteUrl.trim();
+  let path: string | null = null;
+
+  const scpMatch = remote.match(/^(?:[^@/]+@)?github\.com:([^?#]+)$/i);
+  if (scpMatch) {
+    path = scpMatch[1];
+  } else {
+    try {
+      const parsed = new URL(remote);
+      if (parsed.hostname.toLowerCase() !== "github.com") {
+        return null;
+      }
+      path = parsed.pathname;
+    } catch {
+      return null;
+    }
+  }
+
+  const parts = path.replace(/^\/+|\/+$/g, "").split("/");
+  if (parts.length !== 2) {
+    return null;
+  }
+
+  const owner = parts[0].toLowerCase();
+  const repo = parts[1].replace(/\.git$/i, "").toLowerCase();
+  if (!owner || !repo) {
+    return null;
+  }
+
+  return { owner, repo };
+}
+
+export function isReactNativeRemote(remoteUrl: string): boolean {
+  const repository = parseGitHubRemote(remoteUrl);
+  return repository != null &&
+    repository.repo === "react-native" &&
+    REACT_NATIVE_OWNERS.has(repository.owner);
+}
+
+export function isInsideReactNativeRepo(cwd?: string): boolean {
+  try {
+    return isReactNativeRemote(git("remote get-url origin", cwd));
+  } catch {
+    return false;
+  }
 }
 
 export function currentBranch(cwd?: string): string {
